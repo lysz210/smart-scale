@@ -1,5 +1,4 @@
-from asyncio import gather, sleep, run
-from array import array
+from asyncio import sleep, Queue, 
 from hx711 import HX711
 
 class Driver:
@@ -8,8 +7,7 @@ class Driver:
       self.listener = []
       self.hx.set_reading_format("MSB", "MSB")
       self.hx.set_reference_unit(-438)
-      self.hx.reset()
-      self.hx.tare()
+      self.zero()
 
   def read(self) -> int:
       self.hx.reset()
@@ -22,6 +20,10 @@ class Driver:
       weight = self.read()
       for listener in self.listener:
         await listener.update(weight)
+
+  def zero(self):
+      self.hx.reset()
+      self.hx.tare()
 
 class Scale:
   def __init__(self, driver: Driver) -> None:
@@ -41,21 +43,25 @@ class Scale:
   async def update(self, value: int) -> None:
       # print('Received %s' % value)
       self.value = value
-      await sleep(0.005)
+      await sleep(0.5)
       # print(self.buffer)
 
   async def out(self):
       while self.executing:
         for output in self.outputs:
             await output.print(await self.getWeight())
-        await sleep(0.01)
+        await sleep(0.5)
 
 class PrintInterface:
   def __init__(self, socket) -> None:
       self.executing = False
       self.waitFor = 1000
       self.socket = socket
+      self.queue = Queue()
 
   async def print(self, weight):
     print(weight)
-    await self.socket.send_str('%d' % weight)
+    await self.socket.emit('scale', '%d' % weight)
+
+  def cmd(self):
+      return self.queue.get()

@@ -4,28 +4,30 @@
       <meta charset="UTF-8">
       <title>SocketIO example</title>
       <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
-      <script type="text/javascript">
-         $(document).ready(function() {
-         
-           // sending a connect request to the server.
-           var socket = new WebSocket('ws://localhost:8080/ws');
-            socket.onmessage = message => {
-               console.log(new Date().toISOString())
-               $('#log').html('<br>' + $('<div/>').text('weight: ' + message.data).html());
-            }
-         //   socket.on('after connect', function(msg) {
-         //       console.log('After connect', msg);
-         //       $('#log').append('<br>' + $('<div/>').text('Received: ' + msg.data).html());
-         //  });
-         //  socket.on('scale', data => {
-         //    $('#log').append('<br>' + $('<div/>').text('weight: ' + msg.weight).html());
-         //  })
-         });
-      </script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js" integrity="sha512-MgkNs0gNdrnOM7k+0L+wgiRc5aLgl74sJQKbIWegVIMvVGPc1+gc1L2oK9Wf/D9pq58eqIJAxOonYPVE5UwUFA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+      
    </head>
    <body>
     <h1>SocketIO Example</h1>
     <h2>Receive:</h2>
     <div id="log"></div>
+
+    <script type="text/javascript">
+      $(document).ready(function() {
+      
+        // sending a connect request to the server.
+        var socket = io();
+         socket.on('connect', function() {
+            socket.emit('my event', {data: 'I\'m connected!'});
+         });
+        socket.on('after connect', function(msg) {
+            console.log('After connect', msg);
+            $('#log').append('<br>' + $('<div/>').text('Received: ' + msg.data).html());
+         });
+         socket.on('scale', data => {
+            $('#log').html('<br>' + $('<div/>').text('weight: ' + data).html());
+         })
+      });
+   </script>
    </body>
 </html>

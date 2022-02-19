@@ -1,5 +1,6 @@
 import aiohttp
 from aiohttp import web
+from socketio import AsyncServer
 
 import asyncio
 
@@ -14,30 +15,23 @@ async def update():
     await d.update()
 
 app = web.Application()
+sio = AsyncServer()
+sio.attach(app)
+p = PrintInterface(sio)
+s.addOutput(p)
+
+@sio.event
+def connect(sid, environ):
+    print('connect ', sid)
+@sio.event
+async def chat_message(sid, data):
+    print('message ', data)
 
 routes = web.RouteTableDef()
 
 @routes.get('/')
 async def index(request):
     return web.FileResponse('./templates/index.html')
-@routes.get('/ws')
-async def ws_handler(request):
-    ws = web.WebSocketResponse()
-    await ws.prepare(request)
-
-    p = PrintInterface(ws)
-    s.addOutput(p)
-    async for msg in ws:
-        print(msg)
-        if msg.type == aiohttp.WSMsgType.TEXT:
-            if msg.data == 'close':
-                await ws.close()
-            else:
-                await ws.send_str(msg.data + '/answer')
-        elif msg.type == aiohttp.WSMsgType.ERROR:
-            print('ws connection closed with exception %s' %
-                  ws.exception())
-    return ws
 
 app.add_routes(routes)
 
