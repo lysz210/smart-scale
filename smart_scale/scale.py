@@ -1,68 +1,61 @@
-from asyncio import Lock, gather, sleep, run
+from asyncio import gather, sleep, run
 from array import array
+from hx711 import HX711
+
 class Driver:
   def __init__(self) -> None:
+      self.hx = HX711(13, 19)
       self.listener = []
-      self.i = 1
+      self.hx.set_reading_format("MSB", "MSB")
+      self.hx.set_reference_unit(-438)
+      self.hx.reset()
+      self.hx.tare()
 
   def read(self) -> int:
-      retVal = self.i
-      self.i += 1
-      return retVal
+      self.hx.reset()
+      return int(self.hx.get_weight(1))
 
   def register(self, listener) -> None:
       self.listener.append(listener)
 
   async def update(self) -> None:
+      weight = self.read()
       for listener in self.listener:
-        await listener.update(self.read())
+        await listener.update(weight)
 
 class Scale:
   def __init__(self, driver: Driver) -> None:
       self.driver = driver
-      self.lock = Lock()
-      self.buffer = array('i', [0, 0, 0, 0, 0])
+      self.value = 0
 
       driver.register(self)
+      self.outputs = []
+      self.executing = True
+  
+  def addOutput(self, output):
+      self.outputs.append(output)
   
   async def getWeight(self) -> int:
-      async with self.lock:
-        return self.buffer[0]
+      return self.value
 
   async def update(self, value: int) -> None:
       # print('Received %s' % value)
-      async with self.lock:
-        self.buffer.pop(0)
-        self.buffer.append(value)
-        await sleep(1)
-        # print(self.buffer)
+      self.value = value
+      await sleep(0.005)
+      # print(self.buffer)
 
-import asyncio
+  async def out(self):
+      while self.executing:
+        for output in self.outputs:
+            await output.print(await self.getWeight())
+        await sleep(0.01)
+
 class PrintInterface:
-  def __init__(self, scale: Scale) -> None:
-      self.scale = scale
+  def __init__(self, socket) -> None:
       self.executing = False
       self.waitFor = 1000
+      self.socket = socket
 
-  async def print(self):
-      while self.executing:
-        print(await self.scale.getWeight())
-        await asyncio.sleep(1)
-
-  async def run(self):
-      self.executing = True
-      await self.print()
-
-d = Driver()
-s = Scale(d)
-p = PrintInterface(s)
-
-async def update():
-  while True:
-    await d.update()
-
-
-loop = asyncio.new_event_loop()
-loop.create_task(p.run())
-loop.create_task(update())
-loop.run_forever()
+  async def print(self, weight):
+    print(weight)
+    await self.socket.send_str('%d' % weight)

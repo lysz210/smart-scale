@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8">
+      <title>SocketIO example</title>
+      <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+      <script type="text/javascript">
+         $(document).ready(function() {
+         
+           // sending a connect request to the server.
+           var socket = new WebSocket('ws://localhost:8080/ws');
+            socket.onmessage = message => {
+               console.log(new Date().toISOString())
+               $('#log').html('<br>' + $('<div/>').text('weight: ' + message.data).html());
+            }
+         //   socket.on('after connect', function(msg) {
+         //       console.log('After connect', msg);
+         //       $('#log').append('<br>' + $('<div/>').text('Received: ' + msg.data).html());
+         //  });
+         //  socket.on('scale', data => {
+         //    $('#log').append('<br>' + $('<div/>').text('weight: ' + msg.weight).html());
+         //  })
+         });
+      </script>
+   </head>
+   <body>
+    <h1>SocketIO Example</h1>
+    <h2>Receive:</h2>
+    <div id="log"></div>
+   </body>
+</html>
